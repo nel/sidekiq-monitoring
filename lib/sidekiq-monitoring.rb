@@ -3,6 +3,13 @@ require 'multi_json'
 
 class SidekiqMonitoring < Sinatra::Base
 
+  cattr_accessor :thresholds
+
+  get '/sidekiq_queues' do
+    content_type :json
+    MultiJson.dump SidekiqMonitoring::Global.new(thresholds)
+  end
+
   class Queue
 
     ALERT_STATUS = {
@@ -12,11 +19,7 @@ class SidekiqMonitoring < Sinatra::Base
       'UNKNOWN' => 3
     }
 
-    THRESHOLD = {
-      'default' => [ 1_000, 2_000 ],
-      'low' => [ 10_000, 20_000 ],
-      'io_slow' => [ 10_000, 20_000 ]
-    }
+    DEFAULT_THRESHOLD = [ 1_000, 2_000 ]
 
     attr_accessor :name, :size, :warning_threshold, :critical_threshold, :status
 
@@ -28,13 +31,12 @@ class SidekiqMonitoring < Sinatra::Base
         'critical_threshold' => critical_threshold,
         'status' => status
       }
-      super
     end
 
-    def initialize(name, size)
+    def initialize(name, size, thresholds = nil)
       @name = name
       @size = size
-      @warning_threshold, @critical_threshold = threshold_from_queue
+      @warning_threshold, @critical_threshold = (thresholds.present? ? thresholds : DEFAULT_THRESHOLD)
       @status = monitoring_status
     end
 
@@ -48,35 +50,37 @@ class SidekiqMonitoring < Sinatra::Base
       'OK'
     end
 
-    def threshold_from_queue
-      THRESHOLD.fetch(name) { THRESHOLD['default'] }
-    end
-
   end
 
   class Global
 
+    attr_accessor :thresholds
+
     def as_json(options = {})
       {
         'global_status' => global_status,
-        'queues' => queues
+        'queues' => queues.as_json
       }
-      super
     end
 
     def global_status
       @global_status ||= queues.sort.last.try(:status) || 'UNKNOWN'
     end
 
-    def queues
-      @queues ||= Sidekiq::Queue.all.collect{ |queue| Queue.new(queue.name, queue.size) }
+    def initialize(thresholds = {})
+      @thresholds = thresholds
     end
 
-  end
+    def queues
+      @queues ||= Sidekiq::Queue.all.collect{ |queue|
+        Queue.new(queue.name, queue.size, thresholds_from_queue(queue.name))
+      }
+    end
 
-  get '/sidekiq_queues' do
-    content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new
+    def thresholds_from_queue(queue_name)
+      thresholds.fetch(queue_name) { |threshold| threshold['default'] }
+    end
+
   end
 
 end

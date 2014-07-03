@@ -18,6 +18,28 @@ mount SidekiqMonitoring => '/checks'
 To know the state of your sidekiq queues, go to: `<your_website_url>/checks/sidekiq_queues`
 Please remember to mount the route before going to this URL
 
+# Define custom threshold
+
+Add the following to an initializer:
+
+```ruby
+SidekiqMonitoring.thresholds = {
+  'queue_name_1' => [warning, critical],
+  'queue_name_2' => [warning, critical],
+  'queue_name_3' => [warning, critical]
+}
+```
+
+Or if you want to override the default threshold in case of the queue name
+isn't specified in your thresholds:
+
+```ruby
+SidekiqMonitoring.thresholds = {
+  'default' => [warning, critical],
+  'queue_name' => [warning, critical],
+}
+```
+
 ### Security
 
 In a production application you'll likely want to protect access to this information. You can use the constraints feature of routing (in the _config/routes.rb_ file) to accomplish this:

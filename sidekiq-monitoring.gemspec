@@ -16,7 +16,7 @@ Gem::Specification.new do |gem|
   gem.extensions         = %w()
   gem.test_files         = %w()
   gem.has_rdoc           = false
-  #gem.homepage    = 'http://github.com/ambethia/rack-google_analytics'
+  gem.homepage    = 'http://github.com/dimelo/sidekiq-monitoring'
 
   gem.required_ruby_version              = '>= 1.9.2'
   gem.requirements                       = []

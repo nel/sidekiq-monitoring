@@ -6,32 +6,12 @@ describe SidekiqMonitoring::Queue do
 
     context 'with existing threshold' do
 
+      before do
+        stub_const('SidekiqMonitoring::Queue::DEFAULT_THRESHOLD', [ 5, 10 ])
+      end
+
       subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50) }
 
-      before do
-        stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
-          'default' => [ 5, 10 ],
-          'yolo' => [ 10, 20 ]
-        })
-      end
-
-      its(:threshold_from_queue) { should == [10, 20] }
-      its(:as_json) { should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
-
-    end
-
-    context 'without existing threshold' do
-
-      subject(:queue) { SidekiqMonitoring::Queue.new('yata', 50) }
-
-      before do
-        stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
-          'default' => [ 5, 10 ],
-          'yolo' => [ 10, 20 ]
-        })
-      end
-
-      its(:threshold_from_queue) { should == [5, 10] }
       its(:as_json) { should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
 
       it 'sort by status' do
@@ -68,12 +48,10 @@ describe SidekiqMonitoring::Global do
   context 'with many queues' do
 
     let(:queues_name) { %w(test_low test_medium test_high) }
-    let(:threshold) do
-      stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
-        'test_low' => [ 1_000, 2_000 ],
+    let(:thresholds) do
+      { 'test_low' => [ 1_000, 2_000 ],
         'test_medium' => [ 10_000, 20_000 ],
-        'test_high' => [ 10_000, 20_000 ]
-      })
+        'test_high' => [ 10_000, 20_000 ] }
     end
 
     let(:sidekiq_queues) { queues_name.map{ |name| Sidekiq::Queue.new(name) } }
@@ -85,7 +63,7 @@ describe SidekiqMonitoring::Global do
       end
 
       it { Sidekiq::Queue.all.should have(3).queues }
-      it { SidekiqMonitoring::Global.new.as_json['queues'].should have(3).queues }
+      it { SidekiqMonitoring::Global.new(thresholds).as_json['queues'].should have(3).queues }
 
     end
 
@@ -95,7 +73,7 @@ describe SidekiqMonitoring::Global do
         Sidekiq::Queue.stub(:all) { sidekiq_queues }
       end
 
-      subject(:ok) { SidekiqMonitoring::Global.new.as_json }
+      subject(:ok) { SidekiqMonitoring::Global.new(thresholds).as_json }
 
       it 'process as json' do
         ok['queues'].should be_all{ |queue| queue['status'] == 'OK' }
@@ -108,11 +86,11 @@ describe SidekiqMonitoring::Global do
 
       before do
         queue = sidekiq_queues.pop
-        queue.stub(:size) { threshold[queue.name][0] + 1 }
+        queue.stub(:size) { thresholds[queue.name][0] + 1 }
         Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
       end
 
-      subject(:warning) { SidekiqMonitoring::Global.new.as_json }
+      subject(:warning) { SidekiqMonitoring::Global.new(thresholds).as_json }
 
       it 'process as json' do
         warning['queues'].should be_one{ |queue| queue['status'] == 'WARNING' }
@@ -125,11 +103,11 @@ describe SidekiqMonitoring::Global do
 
       before do
         queue = sidekiq_queues.pop
-        queue.stub(:size) { threshold[queue.name][1] + 1 }
+        queue.stub(:size) { thresholds[queue.name][1] + 1 }
         Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
       end
 
-      subject(:critical) { SidekiqMonitoring::Global.new.as_json }
+      subject(:critical) { SidekiqMonitoring::Global.new(thresholds).as_json }
 
       it 'process as json' do
         critical['queues'].should be_one{ |queue| queue['status'] == 'CRITICAL' }
