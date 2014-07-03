@@ -1,6 +1,4 @@
-#require 'rubygems' unless defined?(Gem)
-#require 'bundler/setup'
-#Bundler.require(:default)
+require 'rack/test'
 require 'sidekiq/api'
 require 'active_support/concern'
 require 'active_model/serialization'
@@ -14,8 +12,12 @@ Dir["./lib/**/*.rb"].each { |f| require f  }
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+def app
+  Nagios::MonitoringSidekiq.new
+end
 
 RSpec.configure do |config|
+  config.include Rack::Test::Methods
   config.treat_symbols_as_metadata_keys_with_true_values = true
   config.run_all_when_everything_filtered = true
   config.filter_run :focus

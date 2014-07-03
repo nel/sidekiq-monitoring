@@ -1,9 +1,9 @@
 require 'sinatra/base'
-require 'sinatra/json'
+require 'multi_json'
 
 module Nagios
 
-  class MonitoringSidekiq < ::Sinatra::Base
+  class MonitoringSidekiq < Sinatra::Base
 
     class Queue
 
@@ -77,7 +77,8 @@ module Nagios
     end
 
     get '/sidekiq_queues' do
-      json MonitoringSidekiq::Global.new
+      content_type :json
+      MultiJson.dump MonitoringSidekiq::Global.new
     end
 
   end

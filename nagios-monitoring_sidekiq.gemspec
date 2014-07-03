@@ -20,10 +20,11 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version              = '>= 1.9.2'
   gem.requirements                       = []
-  gem.add_runtime_dependency             'sinatra', ["~>1.4.0"]
-  gem.add_runtime_dependency             'sinatra-contrib', ["~>1.4.2"]
+  gem.add_runtime_dependency             'sinatra', ["~>1.3"]
+  gem.add_runtime_dependency             'multi_json'
   gem.add_runtime_dependency             'activesupport'
   gem.add_runtime_dependency             'activemodel'
+  gem.add_development_dependency         'rack-test'
   gem.add_development_dependency         'rspec'
   gem.add_development_dependency         'sidekiq', ["~>3.1.0"]
   gem.post_install_message               = nil

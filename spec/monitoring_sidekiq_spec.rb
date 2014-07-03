@@ -1,6 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), 'spec_helper'))
 
-describe Nagios::MonitoringSidekiq do
+describe Nagios::MonitoringSidekiq::Queue do
 
   context 'check queue' do
 
@@ -49,6 +49,10 @@ describe Nagios::MonitoringSidekiq do
     end
 
   end
+
+end
+
+describe Nagios::MonitoringSidekiq::Global do
 
   context 'without queues' do
 
@@ -132,6 +136,20 @@ describe Nagios::MonitoringSidekiq do
         critical['global_status'].should == 'CRITICAL'
       end
 
+    end
+
+  end
+
+end
+
+describe Nagios::MonitoringSidekiq do
+
+  describe 'GET /sidekiq_queues' do
+
+    it 'is success' do
+      get '/sidekiq_queues'
+      last_response.should be_ok
+			last_response.content_type.should == 'application/json'
     end
 
   end
