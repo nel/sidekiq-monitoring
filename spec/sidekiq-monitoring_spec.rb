@@ -1,15 +1,15 @@
 require File.expand_path(File.join(File.dirname(__FILE__), 'spec_helper'))
 
-describe Nagios::MonitoringSidekiq::Queue do
+describe SidekiqMonitoring::Queue do
 
   context 'check queue' do
 
     context 'with existing threshold' do
 
-      subject(:queue) { Nagios::MonitoringSidekiq::Queue.new('yolo', 50) }
+      subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50) }
 
       before do
-        stub_const('Nagios::MonitoringSidekiq::Queue::THRESHOLD', {
+        stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
           'default' => [ 5, 10 ],
           'yolo' => [ 10, 20 ]
         })
@@ -22,10 +22,10 @@ describe Nagios::MonitoringSidekiq::Queue do
 
     context 'without existing threshold' do
 
-      subject(:queue) { Nagios::MonitoringSidekiq::Queue.new('yata', 50) }
+      subject(:queue) { SidekiqMonitoring::Queue.new('yata', 50) }
 
       before do
-        stub_const('Nagios::MonitoringSidekiq::Queue::THRESHOLD', {
+        stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
           'default' => [ 5, 10 ],
           'yolo' => [ 10, 20 ]
         })
@@ -35,9 +35,9 @@ describe Nagios::MonitoringSidekiq::Queue do
       its(:as_json) { should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
 
       it 'sort by status' do
-        yolo = Nagios::MonitoringSidekiq::Queue.new('yolo', 3)
-        monkey = Nagios::MonitoringSidekiq::Queue.new('monkey', 7)
-        bird = Nagios::MonitoringSidekiq::Queue.new('bird', 12)
+        yolo = SidekiqMonitoring::Queue.new('yolo', 3)
+        monkey = SidekiqMonitoring::Queue.new('monkey', 7)
+        bird = SidekiqMonitoring::Queue.new('bird', 12)
 
         yolo.status.should be == 'OK'
         monkey.status.should be == 'WARNING'
@@ -52,11 +52,11 @@ describe Nagios::MonitoringSidekiq::Queue do
 
 end
 
-describe Nagios::MonitoringSidekiq::Global do
+describe SidekiqMonitoring::Global do
 
   context 'without queues' do
 
-    subject(:result) { Nagios::MonitoringSidekiq::Global.new.as_json }
+    subject(:result) { SidekiqMonitoring::Global.new.as_json }
 
     it 'unknown status' do
       result['global_status'].should be == 'UNKNOWN'
@@ -69,7 +69,7 @@ describe Nagios::MonitoringSidekiq::Global do
 
     let(:queues_name) { %w(test_low test_medium test_high) }
     let(:threshold) do
-      stub_const('Nagios::MonitoringSidekiq::Queue::THRESHOLD', {
+      stub_const('SidekiqMonitoring::Queue::THRESHOLD', {
         'test_low' => [ 1_000, 2_000 ],
         'test_medium' => [ 10_000, 20_000 ],
         'test_high' => [ 10_000, 20_000 ]
@@ -85,7 +85,7 @@ describe Nagios::MonitoringSidekiq::Global do
       end
 
       it { Sidekiq::Queue.all.should have(3).queues }
-      it { Nagios::MonitoringSidekiq::Global.new.as_json['queues'].should have(3).queues }
+      it { SidekiqMonitoring::Global.new.as_json['queues'].should have(3).queues }
 
     end
 
@@ -95,7 +95,7 @@ describe Nagios::MonitoringSidekiq::Global do
         Sidekiq::Queue.stub(:all) { sidekiq_queues }
       end
 
-      subject(:ok) { Nagios::MonitoringSidekiq::Global.new.as_json }
+      subject(:ok) { SidekiqMonitoring::Global.new.as_json }
 
       it 'process as json' do
         ok['queues'].should be_all{ |queue| queue['status'] == 'OK' }
@@ -112,7 +112,7 @@ describe Nagios::MonitoringSidekiq::Global do
         Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
       end
 
-      subject(:warning) { Nagios::MonitoringSidekiq::Global.new.as_json }
+      subject(:warning) { SidekiqMonitoring::Global.new.as_json }
 
       it 'process as json' do
         warning['queues'].should be_one{ |queue| queue['status'] == 'WARNING' }
@@ -129,7 +129,7 @@ describe Nagios::MonitoringSidekiq::Global do
         Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
       end
 
-      subject(:critical) { Nagios::MonitoringSidekiq::Global.new.as_json }
+      subject(:critical) { SidekiqMonitoring::Global.new.as_json }
 
       it 'process as json' do
         critical['queues'].should be_one{ |queue| queue['status'] == 'CRITICAL' }
@@ -142,7 +142,7 @@ describe Nagios::MonitoringSidekiq::Global do
 
 end
 
-describe Nagios::MonitoringSidekiq do
+describe SidekiqMonitoring do
 
   describe 'GET /sidekiq_queues' do
 

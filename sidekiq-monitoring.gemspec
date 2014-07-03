@@ -2,14 +2,14 @@ Gem::Specification.new do |gem|
   gem.version            = File.read('VERSION').chomp
   gem.date               = File.mtime('VERSION').strftime('%Y-%m-%d')
 
-  gem.name               = 'nagios-monitoring_sidekiq'
+  gem.name               = 'sidekiq-monitoring'
   gem.authors            = ['Jérémy Carlier']
-  gem.summary            = 'Sidekiq monitoring for Nagios'
-  gem.description        = 'Give a state of all sidekiq available queues'
+  gem.summary            = 'Addons to provide a monitoring API for Sidekiq'
+  gem.description        = 'Give a state of sidekiq available queues'
   gem.email              = 'jeremy.carlier@dimelo.com'
 
   gem.platform           = Gem::Platform::RUBY
-  gem.files              = %w(README.md VERSION) + Dir.glob('lib/**/*.rb')
+  gem.files              = %w(README.md VERSION) + Dir.glob('lib/*.rb')
   gem.bindir             = %q()
   gem.executables        = %w()
   gem.require_paths      = %w(lib)

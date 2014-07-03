@@ -10,7 +10,7 @@ gem 'sinatra', '>= 1.3.0', :require => nil
 Add the following to your `config/routes.rb`:
 
 ```ruby
-mount Nagios::MonitoringSidekiq => '/checks'
+mount SidekiqMonitoring => '/checks'
 ```
 
 # URL endpoint
@@ -28,7 +28,7 @@ Allow any user who have a valid token
 
 ```ruby
 constraints lambda { |req| req.params[:access_token] == '235b0ddfa5867d81a3232fa6c997a382' } do
-  mount Nagios::MonitoringSidekiq, :at => '/checks'
+  mount SidekiqMonitoring, :at => '/checks'
 end
 ```
 
@@ -39,7 +39,7 @@ Allow any authenticated `User`
 ```ruby
 # config/routes.rb
 authenticate :user do
-  mount Nagios::MonitoringSidekiq => '/checks'
+  mount SidekiqMonitoring => '/checks'
 end
 ```
 
@@ -48,7 +48,7 @@ Same as above but also ensures that `User#admin?` returns true
 ```ruby
 # config/routes.rb
 authenticate :user, lambda { |u| u.admin? } do
-  mount Nagios::MonitoringSidekiq => '/checks'
+  mount SidekiqMonitoring => '/checks'
 end
 ```
 
@@ -66,7 +66,7 @@ end
 
 # config/routes.rb
 require "admin_constraint"
-mount Nagios::MonitoringSidekiq => '/checks', :constraints => AdminConstraint.new
+mount SidekiqMonitoring => '/checks', :constraints => AdminConstraint.new
 ```
 
 #### Restful Authentication
@@ -85,7 +85,7 @@ end
 
 # config/routes.rb
 require 'admin_constraint'
-mount Nagios::MonitoringSidekiq => '/checks', :constraints => AdminConstraint.new
+mount SidekiqMonitoring => '/checks', :constraints => AdminConstraint.new
 ```
 
 #### Custom External Authentication
@@ -106,6 +106,6 @@ end
 
 # config/routes.rb
 constraints lambda {|request| AuthConstraint.admin?(request) } do
-  mount Nagios::MonitoringSidekiq => '/checks'
+  mount SidekiqMonitoring => '/checks'
 end
 ```
