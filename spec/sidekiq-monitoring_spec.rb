@@ -12,7 +12,7 @@ describe SidekiqMonitoring::Queue do
 
       subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50) }
 
-      its(:as_json) { should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
+      it { subject.as_json.should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
 
       it 'sort by status' do
         yolo = SidekiqMonitoring::Queue.new('yolo', 3)
@@ -26,6 +26,10 @@ describe SidekiqMonitoring::Queue do
         [monkey, yolo, bird].sort.should == [yolo, monkey, bird]
       end
 
+      it 'does not fail without thresholds' do
+        SidekiqMonitoring::Global.new(nil)
+
+      end
     end
 
   end
@@ -55,6 +59,16 @@ describe SidekiqMonitoring::Global do
     end
 
     let(:sidekiq_queues) { queues_name.map{ |name| Sidekiq::Queue.new(name) } }
+
+    context 'no configuration' do
+      let(:thresholds) { nil }
+
+      before do
+        Sidekiq::Queue.stub(:all) { sidekiq_queues }
+      end
+
+      it { SidekiqMonitoring::Global.new(thresholds).as_json['queues'].should have(3).queues }
+    end
 
     context 'check default' do
 
@@ -127,7 +141,7 @@ describe SidekiqMonitoring do
     it 'is success' do
       get '/sidekiq_queues'
       last_response.should be_ok
-			last_response.content_type.should == 'application/json'
+      last_response.content_type.should == 'application/json'
     end
 
   end

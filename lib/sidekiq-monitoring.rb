@@ -3,11 +3,16 @@ require 'multi_json'
 
 class SidekiqMonitoring < Sinatra::Base
 
-  cattr_accessor :thresholds
+  # Set yours down thresholds configuration
+  # {'default' => [ 1_000, 2_000 ], 'low' => [ 10_000, 20_000 ] }
+  def self.thresholds=(thresholds)
+    @@thresholds = thresholds
+  end
+  @@thresholds = nil
 
   get '/sidekiq_queues' do
     content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new(thresholds)
+    MultiJson.dump SidekiqMonitoring::Global.new(@thresholds)
   end
 
   class Queue
@@ -78,7 +83,7 @@ class SidekiqMonitoring < Sinatra::Base
     end
 
     def thresholds_from_queue(queue_name)
-      thresholds.fetch(queue_name) { |threshold| threshold['default'] }
+      (thresholds || {}).fetch(queue_name) { |threshold| threshold['default'] }
     end
 
   end
