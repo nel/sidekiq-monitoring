@@ -1,8 +1,5 @@
 require 'rack/test'
 require 'sidekiq/api'
-require 'active_support/concern'
-require 'active_model/serialization'
-require 'active_model/serializers/json'
 
 Dir["./lib/*.rb"].each { |f| require f  }
 

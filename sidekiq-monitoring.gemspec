@@ -22,9 +22,8 @@ Gem::Specification.new do |gem|
   gem.requirements                       = []
   gem.add_runtime_dependency             'sinatra', ["~>1.3"]
   gem.add_runtime_dependency             'multi_json'
-  gem.add_runtime_dependency             'activemodel'
   gem.add_development_dependency         'rack-test'
   gem.add_development_dependency         'rspec', ['~>2']
-  gem.add_development_dependency         'sidekiq', ["~>3.1.0"]
+  gem.add_development_dependency         'sidekiq', ["~>3.1"]
   gem.post_install_message               = nil
 end

@@ -8,11 +8,11 @@ class SidekiqMonitoring < Sinatra::Base
   def self.thresholds=(thresholds)
     @@thresholds = thresholds
   end
-  @@thresholds = nil
+  @@thresholds = {}
 
   get '/sidekiq_queues' do
     content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new(@thresholds)
+    MultiJson.dump SidekiqMonitoring::Global.new(@@thresholds)
   end
 
   class Queue
@@ -41,7 +41,7 @@ class SidekiqMonitoring < Sinatra::Base
     def initialize(name, size, thresholds = nil)
       @name = name
       @size = size
-      @warning_threshold, @critical_threshold = (thresholds.present? ? thresholds : DEFAULT_THRESHOLD)
+      @warning_threshold, @critical_threshold = (thresholds ? thresholds : DEFAULT_THRESHOLD)
       @status = monitoring_status
     end
 
@@ -64,12 +64,12 @@ class SidekiqMonitoring < Sinatra::Base
     def as_json(options = {})
       {
         'global_status' => global_status,
-        'queues' => queues.as_json
+        'queues' => queues.map(&:as_json)
       }
     end
 
     def global_status
-      @global_status ||= queues.sort.last.try(:status) || 'UNKNOWN'
+      @global_status ||= (queues.sort.last && queues.sort.last.status) || 'UNKNOWN'
     end
 
     def initialize(thresholds = {})
