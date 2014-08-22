@@ -83,7 +83,7 @@ class SidekiqMonitoring < Sinatra::Base
     end
 
     def thresholds_from_queue(queue_name)
-      (thresholds || {}).fetch(queue_name) { |threshold| threshold['default'] }
+      (thresholds || {})[queue_name]
     end
 
   end
