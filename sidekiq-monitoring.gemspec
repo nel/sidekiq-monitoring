@@ -3,6 +3,7 @@ Gem::Specification.new do |gem|
   gem.date               = File.mtime('VERSION').strftime('%Y-%m-%d')
 
   gem.name               = 'sidekiq-monitoring'
+  gem.license            = 'MIT'
   gem.authors            = ['Jérémy Carlier']
   gem.summary            = 'Addons to provide a monitoring API for Sidekiq'
   gem.description        = 'Give a state of sidekiq available queues'
