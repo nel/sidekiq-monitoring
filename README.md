@@ -28,6 +28,12 @@ SidekiqMonitoring.thresholds = {
   'queue_name_2' => [warning, critical],
   'queue_name_3' => [warning, critical]
 }
+
+SidekiqMonitoring.latency_thresholds = {
+  'queue_name_1' => [warning, critical],
+  'queue_name_2' => [warning, critical],
+  'queue_name_3' => [warning, critical]
+}
 ```
 
 Or if you want to override the default threshold in case of the queue name
