@@ -4,7 +4,7 @@ Gem::Specification.new do |gem|
 
   gem.name               = 'sidekiq-monitoring'
   gem.license            = 'MIT'
-  gem.authors            = ['Jérémy Carlier']
+  gem.authors            = ['Jeremy Carlier']
   gem.summary            = 'Addons to provide a monitoring API for Sidekiq'
   gem.description        = 'Give a state of sidekiq available queues'
   gem.email              = 'jeremy.carlier@dimelo.com'
