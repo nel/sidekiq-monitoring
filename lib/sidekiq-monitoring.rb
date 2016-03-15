@@ -17,7 +17,7 @@ class SidekiqMonitoring < Sinatra::Base
 
   get '/sidekiq_queues' do
     content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new(@@thresholds)
+    MultiJson.dump SidekiqMonitoring::Global.new(@@thresholds, @@latency_thresholds)
   end
 
   module Monitorable
@@ -58,6 +58,8 @@ class SidekiqMonitoring < Sinatra::Base
         'jid' => jid,
         'worker_class' => worker_class,
         'elapsed_time' => elapsed_time,
+        'warning_threshold' => warning_threshold,
+        'critical_threshold' => critical_threshold,
         'status' => status,
         'process_id' => process_id
       }
@@ -98,6 +100,9 @@ class SidekiqMonitoring < Sinatra::Base
         'size' => size,
         'warning_threshold' => warning_threshold,
         'critical_threshold' => critical_threshold,
+        'latency_warning_threshold' => warning_latency_threshold,
+        'latency_critical_threshold' => critical_latency_threshold,
+        'latency' => latency,
         'status' => status
       }
     end
