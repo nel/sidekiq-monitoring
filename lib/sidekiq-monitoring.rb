@@ -113,6 +113,10 @@ class SidekiqMonitoring < Sinatra::Base
       'OK'
     end
 
+    def criticality
+      ALERT_STATUS[monitoring_status]
+    end
+
   end
 
   class Global
@@ -122,7 +126,7 @@ class SidekiqMonitoring < Sinatra::Base
     def as_json(options = {})
       {
         'global_status' => global_status,
-        'queues' => queues.map(&:as_json),
+        'queues' => queues.select { |q| q.size > 0 }.sort_by(&:criticality).reverse!.map!(&:as_json),
         'workers' => workers.map(&:as_json)
       }
     end
