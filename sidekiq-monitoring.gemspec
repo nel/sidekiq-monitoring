@@ -21,7 +21,7 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version              = '>= 1.9.2'
   gem.requirements                       = []
-  gem.add_runtime_dependency             'sinatra', ["~>2.0"]
+  gem.add_runtime_dependency             'sinatra', [">=1.3"]
   gem.add_runtime_dependency             'multi_json'
   gem.add_development_dependency         'rack-test'
   gem.add_development_dependency         'rspec', ['~>2']
