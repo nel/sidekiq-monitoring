@@ -12,18 +12,18 @@ describe SidekiqMonitoring::Queue do
 
       subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50, 50) }
 
-      it { subject.as_json.should include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
+      it { expect(subject.as_json).to include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
 
       it 'sort by status' do
         yolo = SidekiqMonitoring::Queue.new('yolo', 3, 50)
         monkey = SidekiqMonitoring::Queue.new('monkey', 7, 50)
         bird = SidekiqMonitoring::Queue.new('bird', 12, 50)
 
-        yolo.status.should be == 'OK'
-        monkey.status.should be == 'WARNING'
-        bird.status.should be == 'CRITICAL'
+        expect(yolo.status).to eq('OK')
+        expect(monkey.status).to eq('WARNING')
+        expect(bird.status).to eq('CRITICAL')
 
-        [monkey, yolo, bird].sort.should == [yolo, monkey, bird]
+        expect([monkey, yolo, bird].sort).to match_array([yolo, monkey, bird])
       end
 
       it 'does not fail without thresholds' do
@@ -43,8 +43,8 @@ describe SidekiqMonitoring::Global do
     subject(:result) { SidekiqMonitoring::Global.new.as_json }
 
     it 'unknown status' do
-      result['global_status'].should be == 'UNKNOWN'
-      result['queues'].should be_empty
+      expect(result['global_status']).to eq('UNKNOWN')
+      expect(result['queues']).to be_empty
     end
 
   end
@@ -65,55 +65,55 @@ describe SidekiqMonitoring::Global do
     end
 
     let(:queue_size) { 1 }
-    let(:sidekiq_queues) { queues_name.map{ |name| Sidekiq::Queue.new(name).tap { |q| q.stub(:size) { queue_size } } } }
+    let(:sidekiq_queues) { queues_name.map{ |name| Sidekiq::Queue.new(name).tap { |q| allow(q).to receive(:size) { queue_size } } } }
 
     context 'no configuration' do
       let(:thresholds) { nil }
 
       before do
-        Sidekiq::Queue.stub(:all) { sidekiq_queues }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
       end
 
-      it { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].should have(3).queues }
+      it { expect(SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].size).to eq(3) }
     end
 
     context 'check default' do
 
       before do
-        Sidekiq::Queue.stub(:all) { sidekiq_queues }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
       end
 
-      it { Sidekiq::Queue.all.should have(3).queues }
-      it { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].should have(3).queues }
+      it { expect(Sidekiq::Queue.all.size).to eq(3) }
+      it { expect(SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].size).to eq(3) }
 
     end
 
     context 'with empty queues' do
       let(:queue_size) { 0 }
       before do
-        Sidekiq::Queue.stub(:all) { sidekiq_queues }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
       end
 
       subject(:empty_queues) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
 
       it 'skips empty queues' do
-        empty_queues['queues'].length.should == 0
-        empty_queues['global_status'].should == 'OK'
+        expect(empty_queues['queues'].length).to eq(0)
+        expect(empty_queues['global_status']).to eq('OK')
       end
     end
 
     context 'ok status' do
 
       before do
-        Sidekiq::Queue.stub(:all) { sidekiq_queues }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
       end
 
       subject(:ok) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
 
       it 'process as json' do
-        ok['queues'].length.should == 3
-        ok['queues'].should be_all{ |queue| queue['status'] == 'OK' }
-        ok['global_status'].should == 'OK'
+        expect(ok['queues'].length).to eq(3)
+        expect(ok['queues']).to be_all{ |queue| queue['status'] == 'OK' }
+        expect(ok['global_status']).to eq('OK')
       end
 
     end
@@ -122,15 +122,15 @@ describe SidekiqMonitoring::Global do
 
       before do
         queue = sidekiq_queues.pop
-        queue.stub(:size) { thresholds[queue.name][0] + 1 }
-        Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
+        allow(queue).to receive(:size) { thresholds[queue.name][0] + 1 }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues + [queue] }
       end
 
       subject(:warning) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
 
       it 'process as json' do
-        warning['queues'].should be_one{ |queue| queue['status'] == 'WARNING' }
-        warning['global_status'].should == 'WARNING'
+        expect(warning['queues']).to be_one{ |queue| queue['status'] == 'WARNING' }
+        expect(warning['global_status']).to eq('WARNING')
       end
 
     end
@@ -139,15 +139,15 @@ describe SidekiqMonitoring::Global do
 
       before do
         queue = sidekiq_queues.pop
-        queue.stub(:size) { thresholds[queue.name][1] + 1 }
-        Sidekiq::Queue.stub(:all) { sidekiq_queues + [queue] }
+        allow(queue).to receive(:size) { thresholds[queue.name][1] + 1 }
+        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues + [queue] }
       end
 
       subject(:critical) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
 
       it 'process as json' do
-        critical['queues'].should be_one{ |queue| queue['status'] == 'CRITICAL' }
-        critical['global_status'].should == 'CRITICAL'
+        expect(critical['queues']).to be_one{ |queue| queue['status'] == 'CRITICAL' }
+        expect(critical['global_status']).to eq('CRITICAL')
       end
 
     end
@@ -162,8 +162,8 @@ describe SidekiqMonitoring do
 
     it 'is success' do
       get '/sidekiq_queues'
-      last_response.should be_ok
-      last_response.content_type.should == 'application/json'
+      expect(last_response).to be_ok
+      expect(last_response.content_type).to eq('application/json')
     end
 
   end

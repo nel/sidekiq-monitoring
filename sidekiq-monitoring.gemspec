@@ -1,30 +1,32 @@
-Gem::Specification.new do |gem|
-  gem.version            = File.read('VERSION').chomp
-  gem.date               = File.mtime('VERSION').strftime('%Y-%m-%d')
+# coding: utf-8
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'sidekiq-monitoring'
 
-  gem.name               = 'sidekiq-monitoring'
-  gem.license            = 'MIT'
-  gem.authors            = ['Jeremy Carlier']
-  gem.summary            = 'Addons to provide a monitoring API for Sidekiq'
-  gem.description        = 'Give a state of sidekiq available queues'
-  gem.email              = 'jeremy.carlier@dimelo.com'
+Gem::Specification.new do |spec|
+  spec.name          = "sidekiq-monitoring"
+  spec.version       = SidekiqMonitoring::VERSION
+  spec.authors       = ["Jeremy Carlier"]
+  spec.email         = ["jeremy.carlier@dimelo.com"]
 
-  gem.platform           = Gem::Platform::RUBY
-  gem.files              = %w(README.md VERSION) + Dir.glob('lib/*.rb')
-  gem.bindir             = %q()
-  gem.executables        = %w()
-  gem.require_paths      = %w(lib)
-  gem.extensions         = %w()
-  gem.test_files         = %w()
-  gem.has_rdoc           = false
-  gem.homepage    = 'http://github.com/dimelo/sidekiq-monitoring'
+  spec.summary       = %q{Addons to provide a monitoring API for Sidekiq}
+  spec.description   = %q{Give a state of sidekiq available queues}
+  spec.homepage      = "http://github.com/dimelo/sidekiq-monitoring"
+  spec.license       = "MIT"
 
-  gem.required_ruby_version              = '>= 1.9.2'
-  gem.requirements                       = []
-  gem.add_runtime_dependency             'sinatra', [">=1.3"]
-  gem.add_runtime_dependency             'multi_json'
-  gem.add_development_dependency         'rack-test'
-  gem.add_development_dependency         'rspec', ['~>2']
-  gem.add_development_dependency         'sidekiq', ["~>3.1"]
-  gem.post_install_message               = nil
+  spec.files         = `git ls-files -z`.split("\x0").reject do |f|
+    f.match(%r{^(test|spec|features)/})
+  end
+  spec.bindir        = "exe"
+  spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
+  spec.require_paths = ["lib"]
+
+  spec.add_runtime_dependency "sinatra", ">= 1.3"
+  spec.add_runtime_dependency "multi_json"
+
+  spec.add_development_dependency "rack-test"
+  spec.add_development_dependency "bundler", "~> 1.14"
+  spec.add_development_dependency "rake", "~> 10.0"
+  spec.add_development_dependency "rspec", "~> 3.0"
+  spec.add_development_dependency "sidekiq", "~> 3.1"
 end
