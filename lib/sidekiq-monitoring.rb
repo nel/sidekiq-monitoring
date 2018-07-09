@@ -147,35 +147,23 @@ class SidekiqMonitoring < Sinatra::Base
       @global_status ||= (worker_status != 'UNKNOWN' && criticality(worker_status) > criticality(queue_status)) ? worker_status : queue_status
     end
 
-    def initialize(thresholds = {}, latency_thresholds = {}, elapsed_thresholds = {})
-      @thresholds = thresholds
-      @latency_thresholds = latency_thresholds
-      @elapsed_thresholds = elapsed_thresholds
+    def initialize(thresholds = nil, latency_thresholds = nil, elapsed_thresholds = nil)
+      @thresholds = thresholds || {}
+      @latency_thresholds = latency_thresholds || {}
+      @elapsed_thresholds = elapsed_thresholds || {}
     end
 
     def queues
       @queues ||= Sidekiq::Queue.all.map do |queue|
-        Queue.new(queue.name, queue.size, queue.latency, thresholds_from_queue(queue.name), latency_thresholds_from_queue(queue.name))
+        Queue.new(queue.name, queue.size, queue.latency, thresholds[queue.name], latency_thresholds[queue.name])
       end
     end
 
     def workers
       @workers ||= Sidekiq::Workers.new.map do |process_id, thread_id, work|
         payload = work['payload']
-        Worker.new(process_id, payload['jid'], work['run_at'], work['queue'], payload['class'], elapsed_thresholds_from_queue(work['queue']))
+        Worker.new(process_id, payload['jid'], work['run_at'], work['queue'], payload['class'], elapsed_thresholds[work['queue']])
       end
-    end
-
-    def thresholds_from_queue(queue_name)
-      (thresholds || {})[queue_name]
-    end
-
-    def latency_thresholds_from_queue(queue_name)
-      (latency_thresholds || {})[queue_name]
-    end
-
-    def elapsed_thresholds_from_queue(queue_name)
-      (elapsed_thresholds || {})[queue_name]
     end
   end
 end
