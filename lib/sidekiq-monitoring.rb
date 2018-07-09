@@ -20,27 +20,27 @@ class SidekiqMonitoring < Sinatra::Base
   end
   @@elapsed_thresholds = {}
 
+  STATUS_LIST = {
+    'OK' => 0,
+    'WARNING' => 1,
+    'CRITICAL' => 2,
+    'UNKNOWN' => 3
+  }
+
   get '/sidekiq_queues' do
     content_type :json
     MultiJson.dump SidekiqMonitoring::Global.new(@@thresholds, @@latency_thresholds, @@elapsed_thresholds)
   end
 
-  module Monitorable
-    ALERT_STATUS = {
-      'OK' => 0,
-      'WARNING' => 1,
-      'CRITICAL' => 2,
-      'UNKNOWN' => 3
-    }
-
-    attr_accessor :status
+  module StatusMixin
+    attr_reader :status
 
     def <=>(other)
-      ALERT_STATUS[status] <=> ALERT_STATUS[other.status]
+      STATUS_LIST[status] <=> STATUS_LIST[other.status]
     end
 
-    def criticality
-      ALERT_STATUS[monitoring_status]
+    def criticality(status = monitoring_status)
+      STATUS_LIST[status]
     end
 
     def monitoring_status
@@ -49,11 +49,12 @@ class SidekiqMonitoring < Sinatra::Base
   end
 
   class Worker
-    include Monitorable
-
     DEFAULT_ELAPSED_THRESHOLD = [ 60, 120 ]
 
-    attr_accessor :process_id, :jid, :run_at, :queue, :worker_class, :elapsed_warning_threshold, :elapsed_critical_threshold
+    include StatusMixin
+
+    attr_reader :process_id, :jid, :run_at, :queue, :worker_class
+    attr_accessor :elapsed_warning_threshold, :elapsed_critical_threshold
 
     def initialize(process_id, jid, run_at, queue, worker_class, elapsed_thresholds = nil)
       @process_id = process_id
@@ -90,12 +91,13 @@ class SidekiqMonitoring < Sinatra::Base
   end
 
   class Queue
-    include Monitorable
-
     DEFAULT_THRESHOLD = [ 1_000, 2_000 ]
     DEFAULT_LATENCY_THRESHOLD = [ 300, 900 ]
 
-    attr_accessor :name, :size, :warning_threshold, :critical_threshold, :latency, :latency_warning_threshold, :latency_critical_threshold
+    include StatusMixin
+
+    attr_reader :name, :size
+    attr_accessor :warning_threshold, :critical_threshold, :latency, :latency_warning_threshold, :latency_critical_threshold
 
     def initialize(name, size, latency, thresholds = nil, latency_thresholds = nil)
       @name = name
@@ -127,6 +129,8 @@ class SidekiqMonitoring < Sinatra::Base
   end
 
   class Global
+    include StatusMixin
+
     attr_accessor :thresholds, :latency_thresholds, :elapsed_thresholds
 
     def as_json(options = {})
@@ -140,12 +144,7 @@ class SidekiqMonitoring < Sinatra::Base
     def global_status
       queue_status = (queues.sort.last && queues.sort.last.status) || 'UNKNOWN'
       worker_status = (workers.sort.last && workers.sort.last.status) || 'UNKNOWN'
-      status = if worker_status != 'UNKNOWN' && Monitorable::ALERT_STATUS[worker_status] > Monitorable::ALERT_STATUS[queue_status]
-        worker_status
-      else
-        queue_status
-      end
-      @global_status ||= status
+      @global_status ||= (worker_status != 'UNKNOWN' && criticality(worker_status) > criticality(queue_status)) ? worker_status : queue_status
     end
 
     def initialize(thresholds = {}, latency_thresholds = {}, elapsed_thresholds = {})
