@@ -37,14 +37,18 @@ describe SidekiqMonitoring::Queue do
 end
 
 describe SidekiqMonitoring::Global do
-
   context 'without queues' do
+
+    before do
+      allow(Sidekiq::Queue).to receive(:all) { [] }
+    end
 
     subject(:result) { SidekiqMonitoring::Global.new.as_json }
 
     it 'unknown status' do
       expect(result['global_status']).to eq('UNKNOWN')
       expect(result['queues']).to be_empty
+      expect(result['workers']).to be_empty
     end
 
   end
@@ -91,6 +95,41 @@ describe SidekiqMonitoring::Global do
 
       it { expect(Sidekiq::Queue.all.size).to eq(3) }
       it { expect(SidekiqMonitoring::Global.new(thresholds, latency_thresholds, elapsed_thresholds).as_json['queues'].size).to eq(3) }
+
+    end
+
+    context 'with slow workers' do
+
+      before do
+        allow_any_instance_of(SidekiqMonitoring::Global).to receive(:workers) { [SidekiqMonitoring::Worker.new(1234, 'JID-123456', 1531207721, 'low', 'TestWorker', [200, 500])] }
+      end
+
+      it 'is OK' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 10 }
+        sidekiq_monitoring = SidekiqMonitoring::Global.new(thresholds, latency_thresholds, elapsed_thresholds)
+
+        sidekiq_monitoring_json = sidekiq_monitoring.as_json
+        expect(sidekiq_monitoring_json['workers'].size).to eq(1)
+        expect(sidekiq_monitoring_json['global_status']).to eq('OK')
+      end
+
+      it 'is WARNING' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 250 }
+        sidekiq_monitoring = SidekiqMonitoring::Global.new(thresholds, latency_thresholds, elapsed_thresholds)
+
+        sidekiq_monitoring_json = sidekiq_monitoring.as_json
+        expect(sidekiq_monitoring_json['workers'].size).to eq(1)
+        expect(sidekiq_monitoring_json['global_status']).to eq('WARNING')
+      end
+
+      it 'is CRITICAL' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 1200 }
+        sidekiq_monitoring = SidekiqMonitoring::Global.new(thresholds, latency_thresholds, elapsed_thresholds)
+
+        sidekiq_monitoring_json = sidekiq_monitoring.as_json
+        expect(sidekiq_monitoring_json['workers'].size).to eq(1)
+        expect(sidekiq_monitoring_json['global_status']).to eq('CRITICAL')
+      end
 
     end
 

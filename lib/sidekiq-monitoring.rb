@@ -74,8 +74,8 @@ class SidekiqMonitoring < Sinatra::Base
         'worker_class' => worker_class,
         'status' => status,
         'elapsed_time' => elapsed_time,
-        'elapsed_warning_threshold' => warning_elapsed_threshold,
-        'elapsed_critical_threshold' => critical_elapsed_threshold
+        'elapsed_warning_threshold' => elapsed_warning_threshold,
+        'elapsed_critical_threshold' => elapsed_critical_threshold
       }
     end
 
