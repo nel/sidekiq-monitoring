@@ -12,7 +12,7 @@ describe SidekiqMonitoring::Queue do
 
       subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50, 50) }
 
-      it { expect(subject.as_json).to include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
+      it { expect(subject.as_json).to include('name', 'size', 'queue_size_warning_threshold', 'queue_size_critical_threshold', 'status', 'latency', 'latency_warning_threshold', 'latency_critical_threshold') }
 
       it 'sort by status' do
         yolo = SidekiqMonitoring::Queue.new('yolo', 3, 50)

@@ -2,19 +2,24 @@ require 'sinatra/base'
 require 'multi_json'
 
 class SidekiqMonitoring < Sinatra::Base
-  VERSION = "1.2.1"
+  VERSION = "1.3.0"
   # Set your down thresholds configuration
   # {'default' => [ 1_000, 2_000 ], 'low' => [ 10_000, 20_000 ] }
-  def self.thresholds=(thresholds)
-    @@thresholds = thresholds
+  #
+  # NOTE: « queue_size_thresholds » are the thresholds about the number of job in a queue
+  def self.queue_size_thresholds=(queue_size_thresholds)
+    @queue_size_thresholds = queue_size_thresholds
   end
-  @@thresholds = {}
+  @@queue_size_thresholds = {}
 
+  # NOTE: « latency_thresholds » are the thresholds about the latency, difference of time between job pushed/enqueued
+  # (field 'enqueued_at') and job pulled/processed by the queue
   def self.latency_thresholds=(latency_thresholds)
     @@latency_thresholds = latency_thresholds
   end
   @@latency_thresholds = {}
 
+  # NOTE: « elapsed_thresholds » are the thresholds about the elapsed time of a job in a queue (while processing)
   def self.elapsed_thresholds=(elapsed_thresholds)
     @@elapsed_thresholds = elapsed_thresholds
   end
@@ -29,7 +34,7 @@ class SidekiqMonitoring < Sinatra::Base
 
   get '/sidekiq_queues' do
     content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new(@@thresholds, @@latency_thresholds, @@elapsed_thresholds)
+    MultiJson.dump SidekiqMonitoring::Global.new(@@queue_size_thresholds, @@latency_thresholds, @@elapsed_thresholds)
   end
 
   module StatusMixin
@@ -97,13 +102,13 @@ class SidekiqMonitoring < Sinatra::Base
     include StatusMixin
 
     attr_reader :name, :size
-    attr_accessor :warning_threshold, :critical_threshold, :latency, :latency_warning_threshold, :latency_critical_threshold
+    attr_accessor :queue_size_warning_threshold, :queue_size_critical_threshold, :latency, :latency_warning_threshold, :latency_critical_threshold
 
-    def initialize(name, size, latency, thresholds = nil, latency_thresholds = nil)
+    def initialize(name, size, latency, queue_size_thresholds = nil, latency_thresholds = nil)
       @name = name
       @size = size
       @latency = latency
-      @warning_threshold, @critical_threshold = (thresholds ? thresholds : DEFAULT_THRESHOLD)
+      @queue_size_warning_threshold, @queue_size_critical_threshold = (queue_size_thresholds ? queue_size_thresholds : DEFAULT_THRESHOLD)
       @latency_warning_threshold, @latency_critical_threshold = (latency_thresholds ? latency_thresholds : DEFAULT_LATENCY_THRESHOLD)
       @status = monitoring_status
     end
@@ -111,10 +116,10 @@ class SidekiqMonitoring < Sinatra::Base
     def as_json
       {
         'name' => name,
-        'size' => size,
         'status' => status,
-        'warning_threshold' => warning_threshold,
-        'critical_threshold' => critical_threshold,
+        'size' => size,
+        'queue_size_warning_threshold' => queue_size_warning_threshold,
+        'queue_size_critical_threshold' => queue_size_critical_threshold,
         'latency' => latency,
         'latency_warning_threshold' => latency_warning_threshold,
         'latency_critical_threshold' => latency_critical_threshold
@@ -122,8 +127,8 @@ class SidekiqMonitoring < Sinatra::Base
     end
 
     def monitoring_status
-      return 'CRITICAL' if size >= critical_threshold || latency >= latency_critical_threshold
-      return 'WARNING' if size >= warning_threshold || latency >= latency_warning_threshold
+      return 'CRITICAL' if size >= queue_size_critical_threshold || latency >= latency_critical_threshold
+      return 'WARNING' if size >= queue_size_warning_threshold || latency >= latency_warning_threshold
       'OK'
     end
   end
@@ -131,7 +136,7 @@ class SidekiqMonitoring < Sinatra::Base
   class Global
     include StatusMixin
 
-    attr_accessor :thresholds, :latency_thresholds, :elapsed_thresholds
+    attr_accessor :queue_size_thresholds, :latency_thresholds, :elapsed_thresholds
 
     def as_json(options = {})
       {
@@ -147,15 +152,15 @@ class SidekiqMonitoring < Sinatra::Base
       @global_status ||= (worker_status != 'UNKNOWN' && criticality(worker_status) > criticality(queue_status)) ? worker_status : queue_status
     end
 
-    def initialize(thresholds = nil, latency_thresholds = nil, elapsed_thresholds = nil)
-      @thresholds = thresholds || {}
+    def initialize(queue_size_thresholds = nil, latency_thresholds = nil, elapsed_thresholds = nil)
+      @queue_size_thresholds = queue_size_thresholds || {}
       @latency_thresholds = latency_thresholds || {}
       @elapsed_thresholds = elapsed_thresholds || {}
     end
 
     def queues
       @queues ||= Sidekiq::Queue.all.map do |queue|
-        Queue.new(queue.name, queue.size, queue.latency, thresholds[queue.name], latency_thresholds[queue.name])
+        Queue.new(queue.name, queue.size, queue.latency, queue_size_thresholds[queue.name], latency_thresholds[queue.name])
       end
     end
 
