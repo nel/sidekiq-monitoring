@@ -2,7 +2,7 @@ require 'sinatra/base'
 require 'multi_json'
 
 class SidekiqMonitoring < Sinatra::Base
-  VERSION = "1.3.2"
+  VERSION = "1.3.3"
   # Set your down thresholds configuration
   # {'default' => [ 1_000, 2_000 ], 'low' => [ 10_000, 20_000 ] }
   #
