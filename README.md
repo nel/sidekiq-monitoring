@@ -1,4 +1,4 @@
-# Rails 3 and 4
+# Rails 3, 4 and 5
 
 Add `sinatra` (and `sprockets` if you are on Rails 3.0) to your Gemfile
 
@@ -23,6 +23,12 @@ Please remember to mount the route before going to this URL
 Add the following to an initializer:
 
 ```ruby
+SidekiqMonitoring.elapsed_thresholds = {
+  'queue_name_1' => [warning, critical],
+  'queue_name_2' => [warning, critical],
+  'queue_name_3' => [warning, critical]
+}
+
 SidekiqMonitoring.thresholds = {
   'queue_name_1' => [warning, critical],
   'queue_name_2' => [warning, critical],
@@ -33,16 +39,6 @@ SidekiqMonitoring.latency_thresholds = {
   'queue_name_1' => [warning, critical],
   'queue_name_2' => [warning, critical],
   'queue_name_3' => [warning, critical]
-}
-```
-
-Or if you want to override the default threshold in case of the queue name
-isn't specified in your thresholds:
-
-```ruby
-SidekiqMonitoring.thresholds = {
-  'default' => [warning, critical],
-  'queue_name' => [warning, critical],
 }
 ```
 
