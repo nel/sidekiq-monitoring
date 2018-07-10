@@ -12,7 +12,7 @@ describe SidekiqMonitoring::Queue do
 
       subject(:queue) { SidekiqMonitoring::Queue.new('yolo', 50, 50) }
 
-      it { expect(subject.as_json).to include('name', 'size', 'warning_threshold', 'critical_threshold', 'status') }
+      it { expect(subject.as_json).to include('name', 'size', 'queue_size_warning_threshold', 'queue_size_critical_threshold', 'status', 'latency', 'latency_warning_threshold', 'latency_critical_threshold') }
 
       it 'sort by status' do
         yolo = SidekiqMonitoring::Queue.new('yolo', 3, 50)
@@ -28,7 +28,6 @@ describe SidekiqMonitoring::Queue do
 
       it 'does not fail without thresholds' do
         SidekiqMonitoring::Global.new(nil)
-
       end
     end
 
@@ -37,22 +36,19 @@ describe SidekiqMonitoring::Queue do
 end
 
 describe SidekiqMonitoring::Global do
-
   context 'without queues' do
-
     subject(:result) { SidekiqMonitoring::Global.new.as_json }
 
     it 'unknown status' do
       expect(result['global_status']).to eq('UNKNOWN')
       expect(result['queues']).to be_empty
+      expect(result['workers']).to be_empty
     end
-
   end
 
-  context 'with many queues' do
+  context 'with existing queues' do
 
-    let(:queues_name) { %w(test_low test_medium test_high) }
-    let(:thresholds) do
+    let(:queue_size_thresholds) do
       { 'test_low' => [ 1_000, 2_000 ],
         'test_medium' => [ 10_000, 20_000 ],
         'test_high' => [ 10_000, 20_000 ] }
@@ -64,96 +60,147 @@ describe SidekiqMonitoring::Global do
         'test_high' => [ 900, 1_800 ] }
     end
 
-    let(:queue_size) { 1 }
-    let(:sidekiq_queues) { queues_name.map{ |name| Sidekiq::Queue.new(name).tap { |q| allow(q).to receive(:size) { queue_size } } } }
-
-    context 'no configuration' do
-      let(:thresholds) { nil }
-
-      before do
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
-      end
-
-      it { expect(SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].size).to eq(3) }
+    let(:elapsed_thresholds) do
+      { 'test_low' => [ 30, 90 ],
+        'test_medium' => [ 180, 360 ],
+        'test_high' => [ 90, 180 ] }
     end
 
-    context 'check default' do
+    before { %w(test_low test_medium test_high).each { |name| Sidekiq::Client.push('queue' => name, 'class' => 'TestWorker', 'args' => []) } }
+    after { $REDIS.flushdb }
 
-      before do
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
-      end
-
+    context 'checks defaults shared with other tests' do
       it { expect(Sidekiq::Queue.all.size).to eq(3) }
-      it { expect(SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json['queues'].size).to eq(3) }
-
+      it { expect(SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds).as_json['queues']).to be_all { |queue| queue['size'] == 1 } }
+      it { expect(SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds).as_json['queues'].size).to eq(3) }
     end
 
-    context 'with empty queues' do
-      let(:queue_size) { 0 }
-      before do
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
-      end
+    context 'without configuration (or broken configuration)' do
+      it { expect(SidekiqMonitoring::Global.new(nil, latency_thresholds, elapsed_thresholds).as_json['queues'].size).to eq(3) }
+    end
 
-      subject(:empty_queues) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
+    context 'without job in queue' do
+      before { Sidekiq::Queue.all.each { |q| q.each &:delete } }
+      subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds).as_json }
 
-      it 'skips empty queues' do
-        expect(empty_queues['queues'].length).to eq(0)
-        expect(empty_queues['global_status']).to eq('OK')
+      it 'is OK' do
+        expect(subject['queues'].length).to eq(0)
+        expect(subject['global_status']).to eq('OK')
       end
     end
 
-    context 'ok status' do
-
-      before do
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues }
-      end
-
-      subject(:ok) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
-
-      it 'process as json' do
-        expect(ok['queues'].length).to eq(3)
-        expect(ok['queues']).to be_all{ |queue| queue['status'] == 'OK' }
-        expect(ok['global_status']).to eq('OK')
-      end
-
-    end
-
-    context 'warning status' do
+    context 'with slow workers - rely on elapsed thresholds' do
+      subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds) }
 
       before do
-        queue = sidekiq_queues.pop
-        allow(queue).to receive(:size) { thresholds[queue.name][0] + 1 }
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues + [queue] }
+        allow_any_instance_of(SidekiqMonitoring::Global).to receive(:workers) { [SidekiqMonitoring::Worker.new(1234, 'JID-123456', 1531207721, 'low', 'TestWorker', [200, 500])] }
       end
 
-      subject(:warning) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
-
-      it 'process as json' do
-        expect(warning['queues']).to be_one{ |queue| queue['status'] == 'WARNING' }
-        expect(warning['global_status']).to eq('WARNING')
+      it 'is OK' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 10 }
+        expect(subject.as_json['workers'].size).to eq(1)
+        expect(subject.as_json['global_status']).to eq('OK')
       end
 
+      it 'is WARNING' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 250 }
+        expect(subject.as_json['workers'].size).to eq(1)
+        expect(subject.as_json['global_status']).to eq('WARNING')
+      end
+
+      it 'is CRITICAL' do
+        allow_any_instance_of(SidekiqMonitoring::Worker).to receive(:elapsed_time) { 1200 }
+        expect(subject.as_json['workers'].size).to eq(1)
+        expect(subject.as_json['global_status']).to eq('CRITICAL')
+      end
     end
 
-    context 'critical status' do
+    context 'with too many jobs in queue - rely on queue size thresholds' do
+      subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds) }
 
-      before do
-        queue = sidekiq_queues.pop
-        allow(queue).to receive(:size) { thresholds[queue.name][1] + 1 }
-        allow(Sidekiq::Queue).to receive(:all) { sidekiq_queues + [queue] }
+      context 'is OK' do
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(3)
+          expect(subject.as_json['queues']).to be_all { |queue| queue['status'] == 'OK' }
+          expect(subject.as_json['global_status']).to eq('OK')
+        end
       end
 
-      subject(:critical) { SidekiqMonitoring::Global.new(thresholds, latency_thresholds).as_json }
+      context 'is WARNING' do
+        before do
+          warning_threshold = queue_size_thresholds['test_low'][0] + 1
+          warning_threshold.times { Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => []) }
+        end
 
-      it 'process as json' do
-        expect(critical['queues']).to be_one{ |queue| queue['status'] == 'CRITICAL' }
-        expect(critical['global_status']).to eq('CRITICAL')
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(3)
+          expect(subject.as_json['queues']).to be_one { |queue| queue['status'] == 'WARNING' }
+          expect(subject.as_json['global_status']).to eq('WARNING')
+        end
       end
 
+      context 'is CRITICAL' do
+        before do
+          critical_threshold = queue_size_thresholds['test_low'][1] + 1
+          critical_threshold.times { Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => []) }
+        end
+
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(3)
+          expect(subject.as_json['queues']).to be_one { |queue| queue['status'] == 'CRITICAL' }
+          expect(subject.as_json['global_status']).to eq('CRITICAL')
+        end
+      end
     end
 
+    context 'with a worker waiting too long to be processed - rely on latency thresholds' do
+      before { Sidekiq::Queue.all.each { |q| q.each &:delete } }
+
+      subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds) }
+
+      context 'is OK' do
+        before do
+          Timecop.freeze(Time.now - 4 * 60) do # 4 minutes ago
+            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
+          end
+        end
+
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(1)
+          expect(subject.as_json['queues']).to be_all { |queue| queue['status'] == 'OK' }
+          expect(subject.as_json['global_status']).to eq('OK')
+        end
+      end
+
+      context 'is WARNING' do
+        before do
+          Timecop.freeze(Time.now - 6 * 60) do # 6 minutes ago
+            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
+          end
+        end
+
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(1)
+          expect(subject.as_json['queues']).to be_one { |queue| queue['status'] == 'WARNING' }
+          expect(subject.as_json['global_status']).to eq('WARNING')
+        end
+      end
+
+      context 'is CRITICAL' do
+        before do
+          Timecop.freeze(Time.now - 16 * 60) do # 16 minutes ago
+            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
+          end
+        end
+
+        it 'process as json' do
+          expect(subject.as_json['queues'].length).to eq(1)
+          expect(subject.as_json['queues']).to be_one { |queue| queue['status'] == 'CRITICAL' }
+          expect(subject.as_json['global_status']).to eq('CRITICAL')
+        end
+      end
+    end
   end
-
 end
 
 describe SidekiqMonitoring do
