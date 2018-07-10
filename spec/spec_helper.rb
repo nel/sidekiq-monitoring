@@ -26,5 +26,5 @@ RSpec.configure do |config|
   config.order = 'random'
 
   # NOTE: should not use redis while testing
-  Sidekiq.redis = ConnectionPool.new(size: 5) { MockRedis.new }
+  Sidekiq.redis = ConnectionPool.new(size: 5) { $REDIS = MockRedis.new }
 end
