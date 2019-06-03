@@ -8,7 +8,7 @@ class SidekiqMonitoring < Sinatra::Base
   #
   # NOTE: « queue_size_thresholds » are the thresholds about the number of job in a queue
   def self.queue_size_thresholds=(queue_size_thresholds)
-    @queue_size_thresholds = queue_size_thresholds
+    @@queue_size_thresholds = queue_size_thresholds
   end
   @@queue_size_thresholds = {}
 

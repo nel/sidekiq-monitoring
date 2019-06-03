@@ -2,11 +2,11 @@
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
-require 'sidekiq-monitoring'
+require 'version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'sidekiq-monitoring'
-  spec.version       = SidekiqMonitoring::VERSION
+  spec.version       = SidekiqMonitoringBase::VERSION
   spec.authors       = ['Jeremy Carlier']
   spec.email         = ['jeremy.carlier@dimelo.com']
 
