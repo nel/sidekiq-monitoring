@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dimelo/sidekiq-monitoring.svg?branch=master)](https://travis-ci.org/dimelo/sidekiq-monitoring)
+
 # Rails 3, 4 and 5
 
 Add `sinatra` (and `sprockets` if you are on Rails 3.0) to your Gemfile
