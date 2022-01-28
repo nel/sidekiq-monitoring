@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   end
 
   spec.require_paths = ['lib']
-  spec.add_dependency 'sidekiq', '>= 2.12.3', '< 6.1'
+  spec.add_dependency 'sidekiq', '>= 2.12.3', '< 7'
   spec.add_dependency 'sinatra'
   spec.add_dependency 'multi_json'
 
