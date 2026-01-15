@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = 'sidekiq-monitoring'
-  spec.version       = '1.3.6'
+  spec.version       = '1.3.7'
   spec.authors       = ['Jeremy Carlier']
   spec.email         = ['jeremy.carlier@dimelo.com']
 
@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   end
 
   spec.require_paths = ['lib']
-  spec.add_dependency 'sidekiq', '>= 2.12.3', '< 7'
+  spec.add_dependency 'sidekiq', '>= 2.12.3', '< 8'
   spec.add_dependency 'sinatra'
   spec.add_dependency 'multi_json'
 
