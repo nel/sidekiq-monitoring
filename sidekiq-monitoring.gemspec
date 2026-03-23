@@ -2,15 +2,17 @@
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
+require File.join(lib, 'sidekiq-monitoring', 'version')
+
 Gem::Specification.new do |spec|
   spec.name          = 'sidekiq-monitoring'
-  spec.version       = '1.4.2'
+  spec.version       = SidekiqMonitoringVersion::VERSION
   spec.authors       = ['Jeremy Carlier']
   spec.email         = ['jeremy.carlier@dimelo.com']
 
   spec.summary       = %q{Addons to provide a monitoring API for Sidekiq}
   spec.description   = %q{Give a state of sidekiq available queues}
-  spec.homepage      = 'http://github.com/dimelo/sidekiq-monitoring'
+  spec.homepage      = 'https://github.com/nel/sidekiq-monitoring'
   spec.license       = 'MIT'
 
   spec.bindir        = 'exe'

@@ -1,8 +1,9 @@
 require 'sinatra/base'
 require 'json'
+require_relative 'sidekiq-monitoring/version'
 
 class SidekiqMonitoring < Sinatra::Base
-  VERSION = "1.4.2"
+  VERSION = SidekiqMonitoringVersion::VERSION
 
   # Thresholds are hashes mapping queue names to [warning, critical] pairs.
   # Example: { 'default' => [1_000, 2_000], 'low' => [10_000, 20_000] }
