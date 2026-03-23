@@ -35,7 +35,34 @@ describe SidekiqMonitoring::Queue do
 
 end
 
+describe 'Sidekiq API contract' do
+  it 'Queue responds to name, size, latency' do
+    queue = Sidekiq::Queue.new('default')
+    expect(queue).to respond_to(:name)
+    expect(queue).to respond_to(:size)
+    expect(queue).to respond_to(:latency)
+  end
+
+  it 'Queue.all exists' do
+    expect(Sidekiq::Queue).to respond_to(:all)
+  end
+
+  it 'Workers is enumerable' do
+    workers = Sidekiq::Workers.new
+    expect(workers).to respond_to(:each)
+    expect(workers).to respond_to(:map)
+  end
+end
+
 describe SidekiqMonitoring::Global do
+  before do
+    allow(Sidekiq::Queue).to receive(:all).and_return(sidekiq_queues)
+    allow(Sidekiq::Workers).to receive(:new).and_return(sidekiq_workers)
+  end
+
+  let(:sidekiq_queues) { [] }
+  let(:sidekiq_workers) { [] }
+
   context 'without queues' do
     subject(:result) { SidekiqMonitoring::Global.new.as_json }
 
@@ -66,8 +93,13 @@ describe SidekiqMonitoring::Global do
         'test_high' => [ 90, 180 ] }
     end
 
-    before { %w(test_low test_medium test_high).each { |name| Sidekiq::Client.push('queue' => name, 'class' => 'TestWorker', 'args' => []) } }
-    after { $REDIS.flushdb }
+    let(:sidekiq_queues) do
+      [
+        stub_sidekiq_queue(name: 'test_low', size: 1, latency: 0),
+        stub_sidekiq_queue(name: 'test_medium', size: 1, latency: 0),
+        stub_sidekiq_queue(name: 'test_high', size: 1, latency: 0)
+      ]
+    end
 
     context 'checks defaults shared with other tests' do
       it { expect(Sidekiq::Queue.all.size).to eq(3) }
@@ -80,7 +112,14 @@ describe SidekiqMonitoring::Global do
     end
 
     context 'without job in queue' do
-      before { Sidekiq::Queue.all.each { |q| q.each &:delete } }
+      let(:sidekiq_queues) do
+        [
+          stub_sidekiq_queue(name: 'test_low', size: 0, latency: 0),
+          stub_sidekiq_queue(name: 'test_medium', size: 0, latency: 0),
+          stub_sidekiq_queue(name: 'test_high', size: 0, latency: 0)
+        ]
+      end
+
       subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds).as_json }
 
       it 'is OK' do
@@ -127,9 +166,12 @@ describe SidekiqMonitoring::Global do
       end
 
       context 'is WARNING' do
-        before do
-          warning_threshold = queue_size_thresholds['test_low'][0] + 1
-          warning_threshold.times { Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => []) }
+        let(:sidekiq_queues) do
+          [
+            stub_sidekiq_queue(name: 'test_low', size: 1_001, latency: 0),
+            stub_sidekiq_queue(name: 'test_medium', size: 1, latency: 0),
+            stub_sidekiq_queue(name: 'test_high', size: 1, latency: 0)
+          ]
         end
 
         it 'process as json' do
@@ -140,9 +182,12 @@ describe SidekiqMonitoring::Global do
       end
 
       context 'is CRITICAL' do
-        before do
-          critical_threshold = queue_size_thresholds['test_low'][1] + 1
-          critical_threshold.times { Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => []) }
+        let(:sidekiq_queues) do
+          [
+            stub_sidekiq_queue(name: 'test_low', size: 2_001, latency: 0),
+            stub_sidekiq_queue(name: 'test_medium', size: 1, latency: 0),
+            stub_sidekiq_queue(name: 'test_high', size: 1, latency: 0)
+          ]
         end
 
         it 'process as json' do
@@ -154,16 +199,10 @@ describe SidekiqMonitoring::Global do
     end
 
     context 'with a worker waiting too long to be processed - rely on latency thresholds' do
-      before { Sidekiq::Queue.all.each { |q| q.each &:delete } }
-
       subject { SidekiqMonitoring::Global.new(queue_size_thresholds, latency_thresholds, elapsed_thresholds) }
 
       context 'is OK' do
-        before do
-          Timecop.freeze(Time.now - 4 * 60) do # 4 minutes ago
-            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
-          end
-        end
+        let(:sidekiq_queues) { [stub_sidekiq_queue(name: 'test_low', size: 1, latency: 4 * 60)] }
 
         it 'process as json' do
           expect(subject.as_json['queues'].length).to eq(1)
@@ -173,11 +212,7 @@ describe SidekiqMonitoring::Global do
       end
 
       context 'is WARNING' do
-        before do
-          Timecop.freeze(Time.now - 6 * 60) do # 6 minutes ago
-            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
-          end
-        end
+        let(:sidekiq_queues) { [stub_sidekiq_queue(name: 'test_low', size: 1, latency: 6 * 60)] }
 
         it 'process as json' do
           expect(subject.as_json['queues'].length).to eq(1)
@@ -187,11 +222,7 @@ describe SidekiqMonitoring::Global do
       end
 
       context 'is CRITICAL' do
-        before do
-          Timecop.freeze(Time.now - 16 * 60) do # 16 minutes ago
-            Sidekiq::Client.push('queue' => 'test_low', 'class' => 'TestWorker', 'args' => [])
-          end
-        end
+        let(:sidekiq_queues) { [stub_sidekiq_queue(name: 'test_low', size: 1, latency: 16 * 60)] }
 
         it 'process as json' do
           expect(subject.as_json['queues'].length).to eq(1)
@@ -204,6 +235,11 @@ describe SidekiqMonitoring::Global do
 end
 
 describe SidekiqMonitoring do
+
+  before do
+    allow(Sidekiq::Queue).to receive(:all).and_return([])
+    allow(Sidekiq::Workers).to receive(:new).and_return([])
+  end
 
   describe 'GET /sidekiq_queues' do
 
