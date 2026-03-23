@@ -24,6 +24,8 @@ jobs:
             sinatra: '3'
           - sidekiq: 'edge'
             sinatra: '3'
+          - ruby: '4.0'
+            sinatra: '3'
     env:
       SIDEKIQ_VERSION: ${{ matrix.sidekiq }}
       SINATRA_VERSION: ${{ matrix.sinatra }}
