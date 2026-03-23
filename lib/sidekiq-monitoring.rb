@@ -157,9 +157,12 @@ class SidekiqMonitoring < Sinatra::Base
       end
     end
 
+    def self.work_set_class
+      @work_set_class ||= defined?(::Sidekiq::WorkSet) ? ::Sidekiq::WorkSet : ::Sidekiq::Workers
+    end
+
     def workers
-      work_set_class = defined?(Sidekiq::WorkSet) ? Sidekiq::WorkSet : Sidekiq::Workers
-      @workers ||= work_set_class.new.map do |process_id, thread_id, work|
+      @workers ||= self.class.work_set_class.new.map do |process_id, thread_id, work|
         payload = work['payload']
         Worker.new(process_id, payload['jid'], work['run_at'], work['queue'], payload['class'], elapsed_thresholds[work['queue']])
       end
