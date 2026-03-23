@@ -36,7 +36,7 @@ jobs:
       SIDEKIQ_VERSION: ${{ matrix.sidekiq }}
       SINATRA_VERSION: ${{ matrix.sinatra }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
