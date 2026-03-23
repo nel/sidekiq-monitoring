@@ -1,5 +1,5 @@
 require 'sinatra/base'
-require 'multi_json'
+require 'json'
 
 class SidekiqMonitoring < Sinatra::Base
   VERSION = "1.4.0"
@@ -34,7 +34,7 @@ class SidekiqMonitoring < Sinatra::Base
 
   get '/sidekiq_queues' do
     content_type :json
-    MultiJson.dump SidekiqMonitoring::Global.new(@@queue_size_thresholds, @@latency_thresholds, @@elapsed_thresholds)
+    JSON.generate SidekiqMonitoring::Global.new(@@queue_size_thresholds, @@latency_thresholds, @@elapsed_thresholds)
   end
 
   module StatusMixin
