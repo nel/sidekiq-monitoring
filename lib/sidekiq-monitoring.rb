@@ -3,27 +3,20 @@ require 'json'
 
 class SidekiqMonitoring < Sinatra::Base
   VERSION = "1.4.2"
-  # Set your down thresholds configuration
-  # {'default' => [ 1_000, 2_000 ], 'low' => [ 10_000, 20_000 ] }
+
+  # Thresholds are hashes mapping queue names to [warning, critical] pairs.
+  # Example: { 'default' => [1_000, 2_000], 'low' => [10_000, 20_000] }
   #
-  # NOTE: « queue_size_thresholds » are the thresholds about the number of job in a queue
-  def self.queue_size_thresholds=(queue_size_thresholds)
-    @@queue_size_thresholds = queue_size_thresholds
+  # queue_size_thresholds: number of jobs in a queue
+  # latency_thresholds: seconds since oldest job was enqueued
+  # elapsed_thresholds: seconds a worker has been running
+  class << self
+    attr_accessor :queue_size_thresholds, :latency_thresholds, :elapsed_thresholds
   end
-  @@queue_size_thresholds = {}
 
-  # NOTE: « latency_thresholds » are the thresholds about the latency, difference of time between job pushed/enqueued
-  # (field 'enqueued_at') and job pulled/processed by the queue
-  def self.latency_thresholds=(latency_thresholds)
-    @@latency_thresholds = latency_thresholds
-  end
-  @@latency_thresholds = {}
-
-  # NOTE: « elapsed_thresholds » are the thresholds about the elapsed time of a job in a queue (while processing)
-  def self.elapsed_thresholds=(elapsed_thresholds)
-    @@elapsed_thresholds = elapsed_thresholds
-  end
-  @@elapsed_thresholds = {}
+  self.queue_size_thresholds = {}
+  self.latency_thresholds = {}
+  self.elapsed_thresholds = {}
 
   STATUS_LIST = {
     'OK' => 0,
@@ -34,7 +27,7 @@ class SidekiqMonitoring < Sinatra::Base
 
   get '/sidekiq_queues' do
     content_type :json
-    JSON.generate SidekiqMonitoring::Global.new(@@queue_size_thresholds, @@latency_thresholds, @@elapsed_thresholds)
+    JSON.generate SidekiqMonitoring::Global.new(self.class.queue_size_thresholds, self.class.latency_thresholds, self.class.elapsed_thresholds)
   end
 
   module StatusMixin

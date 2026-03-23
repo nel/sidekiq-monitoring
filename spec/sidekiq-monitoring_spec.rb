@@ -255,9 +255,9 @@ describe SidekiqMonitoring do
     let(:queue_size_thresholds) {{
       :test => [100, 1000]
     }}
-    it 'should setup @@queue_size_thresholds' do
+    it 'should setup queue_size_thresholds' do
       SidekiqMonitoring.queue_size_thresholds = queue_size_thresholds
-      expect(SidekiqMonitoring.class_variable_get(:@@queue_size_thresholds)).to eq(queue_size_thresholds)
+      expect(SidekiqMonitoring.queue_size_thresholds).to eq(queue_size_thresholds)
     end
   end
 
@@ -265,9 +265,9 @@ describe SidekiqMonitoring do
     let(:latency_thresholds) {{
       :test => [100, 1000]
     }}
-    it 'should setup @@latency_thresholds' do
+    it 'should setup latency_thresholds' do
       SidekiqMonitoring.latency_thresholds = latency_thresholds
-      expect(SidekiqMonitoring.class_variable_get(:@@latency_thresholds)).to eq(latency_thresholds)
+      expect(SidekiqMonitoring.latency_thresholds).to eq(latency_thresholds)
     end
   end
 
@@ -275,9 +275,9 @@ describe SidekiqMonitoring do
     let(:elapsed_thresholds) {{
       :test => [100, 1000]
     }}
-    it 'should setup @@elapsed_thresholds' do
+    it 'should setup elapsed_thresholds' do
       SidekiqMonitoring.elapsed_thresholds = elapsed_thresholds
-      expect(SidekiqMonitoring.class_variable_get(:@@elapsed_thresholds)).to eq(elapsed_thresholds)
+      expect(SidekiqMonitoring.elapsed_thresholds).to eq(elapsed_thresholds)
     end
   end
 
