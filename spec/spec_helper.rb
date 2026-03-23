@@ -4,6 +4,8 @@ require 'sidekiq/api'
 
 Dir["./lib/*.rb"].each { |f| require f  }
 
+SIDEKIQ_WORK_SET_CLASS = defined?(Sidekiq::WorkSet) ? Sidekiq::WorkSet : Sidekiq::Workers
+
 def stub_sidekiq_queue(name:, size: 1, latency: 0)
   instance_double(Sidekiq::Queue, name: name, size: size, latency: latency)
 end

@@ -48,7 +48,7 @@ describe 'Sidekiq API contract' do
   end
 
   it 'Workers is enumerable' do
-    workers = Sidekiq::Workers.new
+    workers = SIDEKIQ_WORK_SET_CLASS.new
     expect(workers).to respond_to(:each)
     expect(workers).to respond_to(:map)
   end
@@ -57,7 +57,7 @@ end
 describe SidekiqMonitoring::Global do
   before do
     allow(Sidekiq::Queue).to receive(:all).and_return(sidekiq_queues)
-    allow(Sidekiq::Workers).to receive(:new).and_return(sidekiq_workers)
+    allow(SIDEKIQ_WORK_SET_CLASS).to receive(:new).and_return(sidekiq_workers)
   end
 
   let(:sidekiq_queues) { [] }
@@ -238,7 +238,7 @@ describe SidekiqMonitoring do
 
   before do
     allow(Sidekiq::Queue).to receive(:all).and_return([])
-    allow(Sidekiq::Workers).to receive(:new).and_return([])
+    allow(SIDEKIQ_WORK_SET_CLASS).to receive(:new).and_return([])
   end
 
   describe 'GET /sidekiq_queues' do
