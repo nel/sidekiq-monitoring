@@ -125,10 +125,22 @@ end
 
 ## Compatibility
 
-Tested against:
-- Ruby 3.1, 3.2, 3.3, 3.4, 4.0
-- Sidekiq 6, 7, 8
-- Sinatra 3, 4
+|                    | Sinatra 3 | Sinatra 4 |
+|--------------------|-----------|-----------|
+| Ruby 3.1 Sidekiq 6 |     ✓     |     ✓     |
+| Ruby 3.1 Sidekiq 7 |     ✓     |     ✓     |
+| Ruby 3.2 Sidekiq 6 |     ✓     |     ✓     |
+| Ruby 3.2 Sidekiq 7 |     ✓     |     ✓     |
+| Ruby 3.2 Sidekiq 8 |           |     ✓     |
+| Ruby 3.3 Sidekiq 6 |     ✓     |     ✓     |
+| Ruby 3.3 Sidekiq 7 |     ✓     |     ✓     |
+| Ruby 3.3 Sidekiq 8 |           |     ✓     |
+| Ruby 3.4 Sidekiq 6 |     ✓     |     ✓     |
+| Ruby 3.4 Sidekiq 7 |     ✓     |     ✓     |
+| Ruby 3.4 Sidekiq 8 |           |     ✓     |
+| Ruby 4.0 Sidekiq 6 |           |     ✓     |
+| Ruby 4.0 Sidekiq 7 |           |     ✓     |
+| Ruby 4.0 Sidekiq 8 |           |     ✓     |
 
 ## License
 
