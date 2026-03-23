@@ -24,6 +24,4 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'sidekiq', '>= 2.12.3'
   spec.add_dependency 'sinatra', '>= 3.0', '< 6'
   spec.add_dependency 'multi_json'
-
-  spec.add_development_dependency 'bundler', '>= 1.16'
 end
