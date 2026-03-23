@@ -1,137 +1,135 @@
-[![Build Status](https://travis-ci.org/dimelo/sidekiq-monitoring.svg?branch=master)](https://travis-ci.org/dimelo/sidekiq-monitoring)
+[![Test](https://github.com/nel/sidekiq-monitoring/actions/workflows/test.yml/badge.svg)](https://github.com/nel/sidekiq-monitoring/actions/workflows/test.yml)
 
-# Rails 3, 4 and 5
+# Sidekiq Monitoring
 
-Add `sinatra` (and `sprockets` if you are on Rails 3.0) to your Gemfile
+A Sinatra-based monitoring API for Sidekiq queues. Returns JSON with queue sizes, latencies, worker elapsed times, and a global health status (OK, WARNING, CRITICAL, UNKNOWN).
+
+## Installation
+
+Add to your Gemfile:
 
 ```ruby
-# if you require 'sinatra' you get the DSL extended to Object
-gem 'sinatra', '>= 1.3.0', :require => nil
+gem 'sidekiq-monitoring'
 ```
 
-Add the following to your `config/routes.rb`:
+## Setup
+
+### Rack / Sinatra
+
+Mount in your `config.ru`:
+
+```ruby
+require 'sidekiq-monitoring'
+run SidekiqMonitoring
+```
+
+### Rails
+
+Mount in `config/routes.rb`:
 
 ```ruby
 mount SidekiqMonitoring => '/checks'
 ```
 
-# URL endpoint
+### Sinatra 4+ host authorization
 
-To know the state of your sidekiq queues, go to: `<your_website_url>/checks/sidekiq_queues`
-Please remember to mount the route before going to this URL
-
-# Define custom threshold
-
-Add the following to an initializer:
+Sinatra 4 blocks requests from unknown hosts by default. If you're using Sinatra 4+, you need to permit your host:
 
 ```ruby
-SidekiqMonitoring.elapsed_thresholds = {
-  'queue_name_1' => [warning, critical],
-  'queue_name_2' => [warning, critical],
-  'queue_name_3' => [warning, critical]
-}
+SidekiqMonitoring.set(:host_authorization, permitted: "your-domain.com")
+```
 
+Or to allow any host:
+
+```ruby
+SidekiqMonitoring.set(:host_authorization, permitted: "**")
+```
+
+## Usage
+
+Check the state of your Sidekiq queues at:
+
+```
+GET /sidekiq_queues
+```
+
+Returns JSON:
+
+```json
+{
+  "global_status": "OK",
+  "queues": [
+    {
+      "name": "default",
+      "status": "OK",
+      "size": 42,
+      "queue_size_warning_threshold": 1000,
+      "queue_size_critical_threshold": 2000,
+      "latency": 0.5,
+      "latency_warning_threshold": 300,
+      "latency_critical_threshold": 900
+    }
+  ],
+  "workers": []
+}
+```
+
+## Custom thresholds
+
+Configure thresholds in an initializer. Values are `[warning, critical]` pairs.
+
+```ruby
+# Queue size: number of jobs in queue
 SidekiqMonitoring.queue_size_thresholds = {
-  'queue_name_1' => [warning, critical],
-  'queue_name_2' => [warning, critical],
-  'queue_name_3' => [warning, critical]
+  'default' => [1_000, 2_000],
+  'low'     => [10_000, 20_000]
 }
 
+# Latency: seconds since oldest job was enqueued
 SidekiqMonitoring.latency_thresholds = {
-  'queue_name_1' => [warning, critical],
-  'queue_name_2' => [warning, critical],
-  'queue_name_3' => [warning, critical]
+  'default' => [300, 900],
+  'low'     => [1_800, 3_600]
+}
+
+# Elapsed time: seconds a worker has been running
+SidekiqMonitoring.elapsed_thresholds = {
+  'default' => [60, 120],
+  'low'     => [180, 360]
 }
 ```
 
-### Security
+Queues without explicit thresholds use defaults:
+- Queue size: 1,000 / 2,000
+- Latency: 300s / 900s
+- Elapsed time: 60s / 120s
 
-In a production application you'll likely want to protect access to this information. You can use the constraints feature of routing (in the _config/routes.rb_ file) to accomplish this:
+## Security
 
-#### Token
+You'll likely want to protect this endpoint in production.
 
-Allow any user who have a valid token
-
-```ruby
-constraints lambda { |req| req.params[:access_token] == '235b0ddfa5867d81a3232fa6c997a382' } do
-  mount SidekiqMonitoring, :at => '/checks'
-end
-```
-
-#### Devise
-
-Allow any authenticated `User`
+### Token-based
 
 ```ruby
-# config/routes.rb
-authenticate :user do
+constraints lambda { |req| req.params[:access_token] == 'your-secret-token' } do
   mount SidekiqMonitoring => '/checks'
 end
 ```
 
-Same as above but also ensures that `User#admin?` returns true
+### Devise
 
 ```ruby
-# config/routes.rb
 authenticate :user, lambda { |u| u.admin? } do
   mount SidekiqMonitoring => '/checks'
 end
 ```
 
-#### Authlogic
+## Compatibility
 
-```ruby
-# lib/admin_constraint.rb
-class AdminConstraint
-  def matches?(request)
-    return false unless request.cookies['user_credentials'].present?
-    user = User.find_by_persistence_token(request.cookies['user_credentials'].split(':')[0])
-    user && user.admin?
-  end
-end
+Tested against:
+- Ruby 3.1, 3.2, 3.3, 3.4, 4.0
+- Sidekiq 6, 7, 8
+- Sinatra 3, 4
 
-# config/routes.rb
-require "admin_constraint"
-mount SidekiqMonitoring => '/checks', :constraints => AdminConstraint.new
-```
+## License
 
-#### Restful Authentication
-
-Checks a `User` model instance that responds to `admin?`
-
-```ruby
-# lib/admin_constraint.rb
-class AdminConstraint
-  def matches?(request)
-    return false unless request.session[:user_id]
-    user = User.find request.session[:user_id]
-    user && user.admin?
-  end
-end
-
-# config/routes.rb
-require 'admin_constraint'
-mount SidekiqMonitoring => '/checks', :constraints => AdminConstraint.new
-```
-
-#### Custom External Authentication
-
-```ruby
-class AuthConstraint
-  def self.admin?(request)
-    return false unless (cookie = request.cookies['auth'])
-
-    Rails.cache.fetch(cookie['user'], :expires_in => 1.minute) do
-      auth_data = JSON.parse(Base64.decode64(cookie['data']))
-      response = HTTParty.post(Auth.validate_url, :query => auth_data)
-
-      response.code == 200 && JSON.parse(response.body)['roles'].to_a.include?('Admin')
-    end
-  end
-end
-
-# config/routes.rb
-constraints lambda {|request| AuthConstraint.admin?(request) } do
-  mount SidekiqMonitoring => '/checks'
-end
-```
+MIT
