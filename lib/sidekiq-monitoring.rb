@@ -140,8 +140,8 @@ class SidekiqMonitoring < Sinatra::Base
     end
 
     def global_status
-      queue_status = (queues.sort.last && queues.sort.last.status) || 'UNKNOWN'
-      worker_status = (workers.sort.last && workers.sort.last.status) || 'UNKNOWN'
+      queue_status = queues.max&.status || 'UNKNOWN'
+      worker_status = workers.max&.status || 'UNKNOWN'
       @global_status ||= (worker_status != 'UNKNOWN' && criticality(worker_status) > criticality(queue_status)) ? worker_status : queue_status
     end
 
