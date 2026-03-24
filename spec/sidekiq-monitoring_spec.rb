@@ -247,6 +247,8 @@ describe SidekiqMonitoring do
       get '/sidekiq_queues'
       expect(last_response).to be_ok
       expect(last_response.content_type).to eq('application/json')
+      body = JSON.parse(last_response.body)
+      expect(body).to include('global_status', 'queues', 'workers')
     end
 
   end

@@ -28,7 +28,11 @@ class SidekiqMonitoring < Sinatra::Base
 
   get '/sidekiq_queues' do
     content_type :json
-    JSON.generate SidekiqMonitoring::Global.new(self.class.queue_size_thresholds, self.class.latency_thresholds, self.class.elapsed_thresholds)
+    JSON.generate(
+      SidekiqMonitoring::Global
+        .new(self.class.queue_size_thresholds, self.class.latency_thresholds, self.class.elapsed_thresholds)
+        .as_json
+    )
   end
 
   module StatusMixin
